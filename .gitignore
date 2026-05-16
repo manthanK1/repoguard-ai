@@ -1,0 +1,4 @@
+backend/temp_repo/
+backend/venv/
+frontend/node_modules/
+__pycache__/

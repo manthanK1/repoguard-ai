@@ -6,12 +6,38 @@ function App() {
 
   const [data, setData] = useState(null);
 
+  const [repoUrl, setRepoUrl] = useState("");
+  const [prDiff, setPrDiff] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
+
   const analyzeRepo = async () => {
 
     try {
 
+      setLoading(true);
+
+      setLoadingMessage("Cloning repository...");
+
+      setTimeout(() => {
+        setLoadingMessage("Analyzing repository structure...");
+      }, 1500);
+
+      setTimeout(() => {
+        setLoadingMessage("Calculating risk graph...");
+      }, 3000);
+
+      setTimeout(() => {
+        setLoadingMessage("Generating impact analysis...");
+      }, 4500);
+
       const response = await axios.post(
-        "http://127.0.0.1:8001/analyze"
+        "http://127.0.0.1:8001/analyze",
+        {
+          repo_url: repoUrl,
+          pr_diff: prDiff
+        }
       );
 
       setData(response.data);
@@ -19,6 +45,12 @@ function App() {
     } catch (error) {
 
       console.error(error);
+
+    } finally {
+
+      setLoading(false);
+
+      setLoadingMessage("");
 
     }
 
@@ -40,26 +72,94 @@ function App() {
           AI-Powered Change Risk Intelligence Platform
         </p>
 
+        {/* INPUT SECTION */}
+
+        <div className="space-y-6 mb-8">
+
+          {/* REPO URL */}
+
+          <div>
+
+            <label className="block mb-2 text-slate-300 font-medium">
+              GitHub Repository URL
+            </label>
+
+            <input
+              type="text"
+              placeholder="https://github.com/example/repo"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
+            />
+
+          </div>
+
+          {/* PR DIFF */}
+
+          <div>
+
+            <label className="block mb-2 text-slate-300 font-medium">
+              Pull Request Diff / Code Change
+            </label>
+
+            <textarea
+              rows="6"
+              placeholder="Paste PR diff or describe code changes..."
+              value={prDiff}
+              onChange={(e) => setPrDiff(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
+            />
+
+          </div>
+
+        </div>
+
         {/* ANALYZE BUTTON */}
 
         <button
           onClick={analyzeRepo}
-          className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl transition-all duration-300 font-semibold"
+          disabled={loading}
+          className={`px-6 py-3 rounded-xl transition-all duration-300 font-semibold ${
+            loading
+              ? "bg-slate-700 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          Analyze Repository
+
+          {loading
+            ? loadingMessage
+            : "Analyze Repository"}
+
         </button>
 
-        {/* RESULTS SECTION */}
+        {/* LOADING BAR */}
+
+        {loading && (
+
+          <div className="mt-6 w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+
+            <div
+              className="bg-blue-500 h-3 animate-pulse"
+              style={{
+                width: "100%"
+              }}
+            />
+
+          </div>
+
+        )}
+
+        {/* RESULTS */}
 
         {data && (
 
           <>
 
-            {/* TOP DASHBOARD CARDS */}
+            {/* TOP DASHBOARD */}
 
             <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
 
-              {/* RISK OVERVIEW CARD */}
+              {/* RISK CARD */}
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
 
@@ -79,9 +179,39 @@ function App() {
                   {data.summary}
                 </p>
 
+                <div className="mt-6 text-slate-400">
+                  Total Repository Files: {data.total_files}
+                </div>
+
+                {/* LANGUAGES */}
+
+                <div className="mt-6">
+
+                  <h3 className="text-lg font-semibold mb-3">
+                    Detected Languages
+                  </h3>
+
+                  <div className="space-y-2">
+
+                    {Object.entries(data.languages).map(([lang, count]) => (
+
+                      <div
+                        key={lang}
+                        className="flex justify-between bg-slate-800 px-4 py-2 rounded-lg"
+                      >
+                        <span>{lang}</span>
+                        <span>{count} files</span>
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
               </div>
 
-              {/* IMPACTED FILES CARD */}
+              {/* IMPACTED FILES */}
 
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
 
@@ -108,7 +238,7 @@ function App() {
 
             </div>
 
-            {/* BLAST RADIUS GRAPH */}
+            {/* GRAPH SECTION */}
 
             <div className="mt-10 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
 
