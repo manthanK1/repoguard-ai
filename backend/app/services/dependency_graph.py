@@ -26,14 +26,30 @@ def should_skip(path_str: str) -> bool:
     )
 
 
+def parse_changed_files_from_diff(pr_diff: str) -> list:
+    """
+    Extract changed file paths from git diff.
+    """
+
+    changed_files = []
+
+    for line in pr_diff.splitlines():
+
+        if line.startswith("+++ b/"):
+
+            file_path = (
+                line.replace("+++ b/", "")
+                .strip()
+            )
+
+            changed_files.append(file_path)
+
+    return list(set(changed_files))
+
+
 def build_dependency_graph(repo_path: str) -> dict:
     """
     Build lightweight dependency graph for repository analysis.
-
-    Optimized for cloud deployment:
-    - skips heavy directories
-    - limits scanned files
-    - handles AST failures safely
     """
 
     repo = Path(repo_path)
