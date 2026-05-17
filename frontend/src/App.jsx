@@ -35,7 +35,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "https://repoguard-ai-production.up.railway.app/analyze",
+        "https://repoguard-ai-production-f06d.up.railway.app/analyze",
         { repo_url: repoUrl, pr_diff: prDiff }
       );
       setData(response.data);

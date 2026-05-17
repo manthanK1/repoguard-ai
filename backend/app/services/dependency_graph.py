@@ -26,6 +26,18 @@ def should_skip(path_str: str) -> bool:
     )
 
 
+def normalize_module_name(path_str: str) -> str:
+    """
+    Convert file path to Python module notation.
+    """
+
+    return (
+        path_str.replace("\\", ".")
+        .replace("/", ".")
+        .removesuffix(".py")
+    )
+
+
 def parse_changed_files_from_diff(pr_diff: str) -> list:
     """
     Extract changed file paths from git diff.
@@ -50,6 +62,12 @@ def parse_changed_files_from_diff(pr_diff: str) -> list:
 def build_dependency_graph(repo_path: str) -> dict:
     """
     Build lightweight dependency graph for repository analysis.
+
+    Supports:
+    - from x import y
+    - import x
+
+    Optimized for cloud deployment.
     """
 
     repo = Path(repo_path)
@@ -67,11 +85,7 @@ def build_dependency_graph(repo_path: str) -> dict:
 
             rel = f.relative_to(repo)
 
-            module_name = (
-                str(rel)
-                .replace(os.sep, ".")
-                .removesuffix(".py")
-            )
+            module_name = normalize_module_name(str(rel))
 
             module_map[module_name] = str(rel)
 
@@ -101,18 +115,33 @@ def build_dependency_graph(repo_path: str) -> dict:
 
             try:
 
+                # from x import y
                 if isinstance(node, ast.ImportFrom) and node.module:
 
                     target = node.module
 
-                    if any(
-                        target.startswith(m)
-                        for m in module_map
-                    ):
+                    for module_name in module_map:
 
-                        edges[rel].append(target)
+                        if target.startswith(module_name):
 
-                        fan_in[target] += 1
+                            edges[rel].append(module_name)
+
+                            fan_in[module_name] += 1
+
+                # import x
+                elif isinstance(node, ast.Import):
+
+                    for alias in node.names:
+
+                        target = alias.name
+
+                        for module_name in module_map:
+
+                            if target.startswith(module_name):
+
+                                edges[rel].append(module_name)
+
+                                fan_in[module_name] += 1
 
             except Exception:
                 continue
@@ -153,18 +182,17 @@ def get_blast_radius(
 
         for f in frontier:
 
-            module_name = (
-                f.replace("/", ".")
-                .removesuffix(".py")
-            )
+            module_name = normalize_module_name(f)
 
             dependents = reverse.get(module_name, [])
 
             next_frontier.update(dependents)
 
-        frontier = next_frontier - affected
+        next_frontier = next_frontier - affected
 
         affected.update(next_frontier)
+
+        frontier = next_frontier
 
     return {
         "directly_affected": list(changed_files),
