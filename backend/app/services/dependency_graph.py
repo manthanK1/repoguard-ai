@@ -20,7 +20,10 @@ def should_skip(path_str: str) -> bool:
         "test"
     ]
 
-    return any(keyword in path_str.lower() for keyword in skip_keywords)
+    return any(
+        keyword in path_str.lower()
+        for keyword in skip_keywords
+    )
 
 
 def build_dependency_graph(repo_path: str) -> dict:
@@ -45,6 +48,7 @@ def build_dependency_graph(repo_path: str) -> dict:
     for f in all_py_files:
 
         try:
+
             rel = f.relative_to(repo)
 
             module_name = (
@@ -103,4 +107,53 @@ def build_dependency_graph(repo_path: str) -> dict:
         "fan_in": dict(fan_in),
         "module_map": module_map,
         "scanned_files": len(all_py_files)
+    }
+
+
+def get_blast_radius(
+    changed_files: list,
+    graph: dict,
+    hops: int = 2
+) -> dict:
+    """
+    Walk dependency graph to estimate downstream impact.
+    """
+
+    affected = set(changed_files)
+
+    frontier = set(changed_files)
+
+    reverse = defaultdict(list)
+
+    for importer, imports in graph["edges"].items():
+
+        for imp in imports:
+
+            reverse[imp].append(importer)
+
+    for _ in range(hops):
+
+        next_frontier = set()
+
+        for f in frontier:
+
+            module_name = (
+                f.replace("/", ".")
+                .removesuffix(".py")
+            )
+
+            dependents = reverse.get(module_name, [])
+
+            next_frontier.update(dependents)
+
+        frontier = next_frontier - affected
+
+        affected.update(next_frontier)
+
+    return {
+        "directly_affected": list(changed_files),
+        "blast_radius": list(
+            affected - set(changed_files)
+        ),
+        "blast_radius_size": len(affected)
     }
