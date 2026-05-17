@@ -1,4 +1,7 @@
-backend/temp_repo/
-backend/venv/
+node_modules/
 frontend/node_modules/
+backend/venv/
 __pycache__/
+dist/
+build/
+.env
