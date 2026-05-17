@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 
 import BlastRadiusGraph from "./components/BlastRadiusGraph";
@@ -56,10 +56,22 @@ function App() {
     : data?.risk_level === "MEDIUM" ? "text-yellow-400"
     : "text-green-400";
 
-  const riskBorder =
-    data?.risk_level === "HIGH"   ? "border-red-900/50"
-    : data?.risk_level === "MEDIUM" ? "border-yellow-900/50"
-    : "border-green-900/50";
+  useEffect(() => {
+    const els = document.querySelectorAll(".reveal");
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry, i) => {
+          if (entry.isIntersecting) {
+            setTimeout(() => entry.target.classList.add("visible"), i * 80);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [data]);
 
   const SIGNAL_CONFIG = [
     { key: "fan_in_criticality",    label: "Fan-in Criticality",     max: 30, desc: "How many modules import the changed files" },
@@ -72,19 +84,25 @@ function App() {
     path?.replace(/\\/g, "/").split("/").pop() ?? path;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="relative min-h-screen bg-slate-950 text-white p-8">
+      <div className="rg-orb-blue" />
+      <div className="rg-orb-purple" />
+      <div className="relative max-w-7xl mx-auto z-10">
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
         <div className="mb-10">
-          <h1 className="text-6xl font-bold mb-4">RepoGuard AI</h1>
+          <div className="rg-eyebrow">
+            <span className="rg-eyebrow-dot" />
+            Change Risk Intelligence
+          </div>
+          <h1 className="text-6xl font-bold mb-4 rg-title-gradient">RepoGuard AI</h1>
           <p className="text-slate-400 text-xl">
             Static Analysis · Dependency Intelligence · Risk Scoring
           </p>
           {data && (
             <div className="mt-3 flex items-center gap-2">
-              <span className="text-slate-500 text-sm font-mono">Analyzing</span>
-              <span className="text-blue-400 font-mono text-sm bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
+              <span className="text-slate-500 text-sm rg-mono">Analyzing</span>
+              <span className="text-blue-400 rg-mono text-sm bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
                 {repoUrl.replace("https://github.com/", "")}
               </span>
             </div>
@@ -92,11 +110,11 @@ function App() {
         </div>
 
         {/* ── INPUT SECTION ───────────────────────────────────────────────── */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 mb-8">
+        <div className="rg-card rg-card-lined mb-8 reveal">
           <div className="space-y-6">
 
             <div>
-              <label className="block mb-3 text-lg font-medium text-slate-300">
+              <label className="rg-label text-lg font-medium text-slate-300">
                 GitHub Repository URL
               </label>
               <input
@@ -104,12 +122,12 @@ function App() {
                 placeholder="https://github.com/tiangolo/fastapi"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all"
+                className="rg-input"
               />
             </div>
 
             <div>
-              <label className="block mb-3 text-lg font-medium text-slate-300">
+              <label className="rg-label text-lg font-medium text-slate-300">
                 Pull Request Diff
                 <span className="text-slate-500 text-sm ml-2 font-normal">
                   (paste unified diff for precise file detection)
@@ -120,12 +138,12 @@ function App() {
                 placeholder={`--- a/app/services/auth.py\n+++ b/app/services/auth.py\n@@ -1,5 +1,6 @@`}
                 value={prDiff}
                 onChange={(e) => setPrDiff(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all font-mono text-sm"
+                className="rg-input rg-input-mono"
               />
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500 text-red-400 rounded-xl px-4 py-3">
+              <div className="rg-error">
                 <span className="font-semibold">Error: </span>{error}
               </div>
             )}
@@ -133,11 +151,7 @@ function App() {
             <button
               onClick={analyzeRepo}
               disabled={loading || !repoUrl}
-              className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 ${
-                loading || !repoUrl
-                  ? "bg-slate-700 cursor-not-allowed text-slate-400"
-                  : "bg-blue-600 hover:bg-blue-500"
-              }`}
+              className="rg-btn-primary"
             >
               {loading ? loadingMessage : "Analyze Repository"}
             </button>
@@ -147,8 +161,8 @@ function App() {
 
         {/* ── LOADING BAR ─────────────────────────────────────────────────── */}
         {loading && (
-          <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-8">
-            <div className="bg-blue-500 h-2 animate-pulse w-full rounded-full" />
+          <div className="rg-progress mb-8">
+            <div className="rg-progress-fill" />
           </div>
         )}
 
@@ -160,10 +174,10 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* RISK OVERVIEW */}
-              <div className={`bg-slate-900 border ${riskBorder} rounded-2xl p-8`}>
+              <div className={`rg-risk-card ${data.risk_level === "HIGH" ? "high" : data.risk_level === "MEDIUM" ? "medium" : "low"} reveal`}>
                 <h2 className="text-2xl font-semibold mb-6 text-slate-200">Risk Overview</h2>
 
-                <div className={`text-7xl font-bold mb-2 ${riskColor}`}>
+                <div className={`rg-risk-ring ${data.risk_level === "HIGH" ? "rg-risk-high" : data.risk_level === "MEDIUM" ? "rg-risk-medium" : "rg-risk-low"}`}>
                   {data.risk_score}
                 </div>
                 <div className={`text-xl font-bold mb-6 ${riskColor}`}>
@@ -175,34 +189,32 @@ function App() {
                 </p>
 
                 <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-800 rounded-xl p-3 text-center">
-                    <div className="text-xl font-bold">{data.total_files}</div>
-                    <div className="text-slate-400 text-xs mt-1">total files</div>
+                  <div className="rg-stat-box">
+                    <div className="rg-stat-number">{data.total_files}</div>
+                    <div className="rg-stat-label">total files</div>
                   </div>
-                  <div className="bg-slate-800 rounded-xl p-3 text-center">
-                    <div className="text-xl font-bold">{data.blast_radius_size}</div>
-                    <div className="text-slate-400 text-xs mt-1">blast radius</div>
+                  <div className="rg-stat-box">
+                    <div className="rg-stat-number">{data.blast_radius_size}</div>
+                    <div className="rg-stat-label">blast radius</div>
                   </div>
-                  <div className="bg-slate-800 rounded-xl p-3 text-center">
-                    <div className="text-xl font-bold">
+                  <div className="rg-stat-box">
+                    <div className="rg-stat-number">
                       {Math.round((data.test_coverage_ratio ?? 0) * 100)}%
                     </div>
-                    <div className="text-slate-400 text-xs mt-1">test coverage</div>
+                    <div className="rg-stat-label">test coverage</div>
                   </div>
                 </div>
 
                 {data.high_coupling_detected && (
-                  <div className="inline-flex items-center gap-2 bg-red-950/60 border border-red-700 rounded-lg px-4 py-2">
+                  <div className="rg-coupling-badge">
                     <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
-                    <span className="text-red-400 text-sm font-semibold tracking-wide">
-                      HIGH COUPLING DETECTED
-                    </span>
+                    <span>HIGH COUPLING DETECTED</span>
                   </div>
                 )}
               </div>
 
               {/* SIGNAL BREAKDOWN */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+              <div className="rg-card reveal">
                 <h2 className="text-2xl font-semibold mb-6 text-slate-200">Risk Signal Breakdown</h2>
                 <div className="space-y-5">
                   {SIGNAL_CONFIG.map(({ key, label, max, desc }) => {
@@ -216,7 +228,7 @@ function App() {
                       <div key={key}>
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-slate-300">{label}</span>
-                          <span className="text-slate-400 font-mono">{val}/{max}</span>
+                          <span className="text-slate-400 rg-mono">{val}/{max}</span>
                         </div>
                         <div className="w-full bg-slate-800 rounded-full h-2">
                           <div
@@ -236,7 +248,7 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* CHANGED FILES */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+              <div className="rg-card reveal">
                 <h2 className="text-2xl font-semibold mb-4 text-slate-200">
                   Changed Files
                   <span className="text-slate-500 text-sm font-normal ml-2">(from diff)</span>
@@ -246,7 +258,7 @@ function App() {
                     {data.changed_files.map((file, i) => (
                       <div
                         key={i}
-                        className="bg-red-500/10 border border-red-800/40 px-4 py-3 rounded-xl"
+                        className="rg-file-changed"
                       >
                         <div className="text-red-300 font-mono text-sm font-semibold">
                           {shortName(file)}
@@ -265,7 +277,7 @@ function App() {
               </div>
 
               {/* BLAST RADIUS FILES */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+              <div className="rg-card reveal">
                 <h2 className="text-2xl font-semibold mb-4 text-slate-200">
                   Blast Radius Files
                   <span className="text-slate-500 text-sm font-normal ml-2">(2-hop walk)</span>
@@ -276,7 +288,7 @@ function App() {
                       {data.impacted_files.map((file, i) => (
                         <div
                           key={i}
-                          className="bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl font-mono text-sm"
+                          className="rg-file-blast"
                         >
                           {shortName(file)}
                         </div>
@@ -295,13 +307,13 @@ function App() {
             </div>
 
             {/* ROW 3: Languages */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+            <div className="rg-card reveal">
               <h2 className="text-2xl font-semibold mb-4 text-slate-200">Detected Languages</h2>
               <div className="flex flex-wrap gap-3">
                 {Object.entries(data.languages || {}).map(([lang, count]) => (
                   <div
                     key={lang}
-                    className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl text-sm"
+                    className="rg-lang-chip"
                   >
                     <span className="font-medium text-white">{lang}</span>
                     <span className="text-slate-400 ml-2">{count} files</span>
@@ -312,7 +324,7 @@ function App() {
 
             {/* ROW 4: AI Narrative */}
             {data.ai_narrative && (
-              <div className="bg-slate-900 border border-blue-900/50 rounded-2xl p-8">
+              <div className="rg-ai-panel reveal">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
                   <h2 className="text-lg font-semibold text-slate-200">AI Risk Assessment</h2>
@@ -325,7 +337,7 @@ function App() {
             )}
 
             {/* ROW 5: How Risk Was Calculated */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+            <div className="rg-card reveal">
               <h2 className="text-lg font-semibold text-slate-200 mb-4">
                 How Risk Was Calculated
               </h2>
@@ -340,17 +352,17 @@ function App() {
                 ].map(({ label, value }) => (
                   <div
                     key={label}
-                    className="flex flex-col bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-3"
+                    className="rg-meta-cell"
                   >
-                    <span className="text-slate-500 text-xs mb-1">{label}</span>
-                    <span className="text-slate-300 text-xs">{value}</span>
+                    <span className="rg-meta-key">{label}</span>
+                    <span className="rg-meta-val">{value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* ROW 6: Blast Radius Graph */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+            <div className="rg-card reveal">
               <h2 className="text-2xl font-semibold mb-2 text-slate-200">
                 Blast Radius Visualization
               </h2>
