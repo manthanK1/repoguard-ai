@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.analyze import router as analyze_router
@@ -8,11 +9,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Allow origins via env var (comma-separated) or fall back to wildcard
+raw_origins = os.environ.get("ALLOWED_ORIGINS", "*")
+origins = [o.strip() for o in raw_origins.split(",")] if raw_origins != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origins,
     allow_credentials=False,
-    allow_methods=["POST", "GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
